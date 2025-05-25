@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Khali Live - Login</title>
+  <script type="module">
+    // Firebase imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyABtxxWDWPq_T08ekC9EkLpuLpN5R13gTA",
+      authDomain: "globalpay-tdxzu.firebaseapp.com",
+      projectId: "globalpay-tdxzu",
+      storageBucket: "globalpay-tdxzu.appspot.com",
+      messagingSenderId: "511186803807",
+      appId: "1:511186803807:web:185b0f71809144b1b2cfea"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+    const provider = new GoogleAuthProvider();
+
+    // Login
+    async function login() {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        await setDoc(doc(db, "users", user.uid), {
+          name: user.displayName,
+          email: user.email,
+          uid: user.uid,
+          photoURL: user.photoURL
+        });
+        alert("Login successful!");
+      } catch (error) {
+        console.error(error);
+        alert("Login failed.");
+      }
+    }
+
+    // Logout
+    function logout() {
+      signOut(auth).then(() => {
+        alert("Logged out");
+        location.reload();
+      });
+    }
+
+    // Check Auth State
+    onAuthStateChanged(auth, async (user) => {
+      const loginDiv = document.getElementById("login");
+      const userDiv = document.getElementById("user");
+
+      if (user) {
+        const docSnap = await getDoc(doc(db, "users", user.uid));
+        const userData = docSnap.data();
+        loginDiv.style.display = "none";
+        userDiv.innerHTML = `
+          <h2>Welcome ${userData.name}</h2>
+          <img src="${userData.photoURL}" width="100" />
+          <p>Email: ${userData.email}</p>
+          <button onclick="logout()">Logout</button>
+        `;
+      } else {
+        loginDiv.style.display = "block";
+        userDiv.innerHTML = "";
+      }
+    });
+
+    window.login = login;
+    window.logout = logout;
+  </script>
+</head>
+<body>
+  <h1>Khali Live - Firebase Login</h1>
+  <div id="login">
+    <button onclick="login()">Login with Google</button>
+  </div>
+  <div id="user"></div>
+</body>
+</html>
