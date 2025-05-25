@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Khali Live - Powered by Firebase</title>
+</head>
+<body>
+  <h2>Khali Live: Upload & Watch</h2>
+
+  <div id="auth-section">
+    <h3>Register</h3>
+    <input type="email" id="registerEmail" placeholder="Email">
+    <input type="password" id="registerPassword" placeholder="Password">
+    <button onclick="register()">Sign Up</button>
+
+    <h3>Login</h3>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div id="upload-section" style="display:none;">
+    <h3>Upload Video</h3>
+    <input type="file" id="videoFile">
+    <input type="text" id="videoTitle" placeholder="Video title">
+    <button onclick="uploadVideo()">Upload</button>
+  </div>
+
+  <h3>Video Feed</h3>
+  <div id="videoFeed"></div>
+
+  <!-- Firebase Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyABtxxWDWPq_T08ekC9EkLpuLpN5R13gTA",
+      authDomain: "globalpay-tdxzu.firebaseapp.com",
+      projectId: "globalpay-tdxzu",
+      storageBucket: "globalpay-tdxzu.appspot.com",
+      messagingSenderId: "511186803807",
+      appId: "1:511186803807:web:185b0f71809144b1b2cfea"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // Auth logic
+    function register() {
+      const email = document.getElementById('registerEmail').value;
+      const password = document.getElementById('registerPassword').value;
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(() => alert('User registered!'))
+        .catch(err => alert(err.message));
+    }
+
+    function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          alert('Logged in!');
+          document.getElementById('upload-section').style.display = 'block';
+        })
+        .catch(err => alert(err.message));
+    }
+
+    function logout() {
+      auth.signOut().then(() => {
+        alert('Logged out');
+        document.getElementById('upload-section').style.display = 'none';
+      });
+    }
+
+    // Upload video to storage + save metadata
+    function uploadVideo() {
+      const file = document.getElementById('videoFile').files[0];
+      const title = document.getElementById('videoTitle').value;
+      const storageRef = storage.ref('videos/' + file.name);
+      storageRef.put(file).then(snapshot => {
+        snapshot.ref.getDownloadURL().then(url => {
+          db.collection("videos").add({ title, url, uploadedAt: Date.now() });
+          alert('Video uploaded!');
+          loadVideos();
+        });
+      });
+    }
+
+    // Load videos
+    function loadVideos() {
+      const feed = document.getElementById('videoFeed');
+      feed.innerHTML = '';
+      db.collection("videos").orderBy("uploadedAt", "desc").get().then(snapshot => {
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const video = document.createElement("video");
+          video.src = data.url;
+          video.controls = true;
+          video.width = 300;
+          feed.appendChild(video);
+          const title = document.createElement("p");
+          title.innerText = data.title;
+          feed.appendChild(title);
+        });
+      });
+    }
+
+    window.onload = () => {
+      loadVideos();
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          document.getElementById('upload-section').style.display = 'block';
+        } else {
+          document.getElementById('upload-section').style.display = 'none';
+        }
+      });
+    };
+  </script>
+</body>
+</html>
